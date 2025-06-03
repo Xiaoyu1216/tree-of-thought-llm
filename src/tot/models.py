@@ -1,5 +1,7 @@
 import os
 import openai
+
+# backoff: This is a Python library that provides decorators for implementing retry mechanisms with exponential backoff (useful for handling rate limits or temporary API failures).
 import backoff 
 
 completion_tokens = prompt_tokens = 0
@@ -15,6 +17,11 @@ if api_base != "":
     print("Warning: OPENAI_API_BASE is set to {}".format(api_base))
     openai.api_base = api_base
 
+
+# The @backoff.on_exception decorator adds retry logic:
+# backoff.expo: Specifies that the retry delay should increase exponentially (e.g., 1s, 2s, 4s, 8s, etc.).
+# openai.error.OpenAIError: The decorator will catch any errors of this type (e.g., rate limits, timeouts, server errors) and retry the function.
+
 @backoff.on_exception(backoff.expo, openai.error.OpenAIError)
 def completions_with_backoff(**kwargs):
     return openai.ChatCompletion.create(**kwargs)
@@ -22,7 +29,10 @@ def completions_with_backoff(**kwargs):
 def gpt(prompt, model="gpt-4", temperature=0.7, max_tokens=1000, n=1, stop=None) -> list:
     messages = [{"role": "user", "content": prompt}]
     return chatgpt(messages, model=model, temperature=temperature, max_tokens=max_tokens, n=n, stop=stop)
-    
+
+# The OpenAI Python library converts the JSON response into an object (not a raw dictionary).
+# This allows dot notation (e.g., res.choices) as a convenience feature.
+
 def chatgpt(messages, model="gpt-4", temperature=0.7, max_tokens=1000, n=1, stop=None) -> list:
     global completion_tokens, prompt_tokens
     outputs = []
