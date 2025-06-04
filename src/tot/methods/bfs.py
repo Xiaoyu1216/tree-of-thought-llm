@@ -1,12 +1,14 @@
-import itertools
+import itertools # itertools: used to flatten lists (e.g., combining nested list outputs).
 import numpy as np
-from functools import partial
+from functools import partial # pre-fills some function arguments (used to fix GPT model/temperature).
 from tot.models import gpt
 
 def get_value(task, x, y, n_evaluate_sample, cache_value=True):
-    value_prompt = task.value_prompt_wrap(x, y)
+    value_prompt = task.value_prompt_wrap(x, y) # Wraps x and y into a prompt to evaluate how good y is as an answer.
     if cache_value and value_prompt in task.value_cache:
-        return task.value_cache[value_prompt]
+        return task.value_cache[value_prompt] # Uses cache to avoid redundant GPT calls.
+        # gpt(...) returns n_evaluate_sample outputs.
+    # These outputs are passed to task.value_outputs_unwrap(...) to compute a numeric score (e.g., average confidence or reward estimate).
     value_outputs = gpt(value_prompt, n=n_evaluate_sample, stop=None)
     value = task.value_outputs_unwrap(x, y, value_outputs)
     if cache_value:
@@ -48,6 +50,7 @@ def get_samples(task, x, y, n_generate_sample, prompt_sample, stop):
 
 def solve(args, task, idx, to_print=True):
     global gpt
+    # It fixes the gpt() function to have consistent backend and temperature from args.
     gpt = partial(gpt, model=args.backend, temperature=args.temperature)
     print(gpt)
     x = task.get_input(idx)  # input
@@ -59,7 +62,7 @@ def solve(args, task, idx, to_print=True):
             new_ys = [get_samples(task, x, y, args.n_generate_sample, prompt_sample=args.prompt_sample, stop=task.stops[step]) for y in ys]
         elif args.method_generate == 'propose':
             new_ys = [get_proposals(task, x, y) for y in ys]
-        new_ys = list(itertools.chain(*new_ys))
+        new_ys = list(itertools.chain(*new_ys)) # flatten
         ids = list(range(len(new_ys)))
         # evaluation
         if args.method_evaluate == 'vote':
